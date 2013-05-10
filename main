@@ -1,0 +1,552 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Numerics;
+
+namespace AudioControl {
+    public class Arrays {
+        public double[] value = new double[1024];
+         public double priority = 0;
+         public double correlation = 0;
+         public double probability = 0;
+
+        public void calculationOfProbability() {
+            probability = correlation + priority;
+        }
+
+        private static int numberOfArrays = 2;
+
+        public static int setNumberOfArrays(int n) {
+            if (n > 6) {
+                return 1;
+            }
+            if (n < 2) {
+                return -1;
+            }
+            numberOfArrays = n;
+            return 0;
+        }
+
+        public static int getNumberOfArrays() {
+            return numberOfArrays;
+        }
+    }
+
+    public static class VoiceControl {
+
+        private static Arrays standartArray0 = new Arrays();
+        private static Arrays standartArray1 = new Arrays();
+        private static Arrays standartArray2 = new Arrays();
+        private static Arrays standartArray3 = new Arrays();
+        private static Arrays standartArray4 = new Arrays();
+        private static Arrays standartArray5 = new Arrays();
+
+        private const double MAX_PRIORITY = 0.5;
+
+        private const double INC_PRIORITY = 0.05;
+
+        public static void setValueOfArray(int number, double[] array) {
+            double[] absvals = new double[array.Length];
+            FFT.fft(ref array, ref absvals);
+
+            switch (number) {
+                case 1: {
+                        for (int i = 0; i < 1024; i++) {
+                            standartArray0.value[i] = absvals[i];
+                        }
+                        break;
+                    }
+                case 2: {
+                        for (int i = 0; i < 1024; i++) {
+                            standartArray1.value[i] = absvals[i];
+                        } break;
+                    }
+                case 3: {
+                        for (int i = 0; i < 1024; i++) {
+                            standartArray2.value[i] = absvals[i];
+                        } break;
+                    }
+                case 4: {
+                        for (int i = 0; i < 1024; i++) {
+                            standartArray3.value[i] = absvals[i];
+                        } break;
+                    }
+                case 5: {
+                        for (int i = 0; i < 1024; i++) {
+                            standartArray4.value[i] = absvals[i];
+                        }
+                        break;
+                    }
+                case 6: {
+                        for (int i = 0; i < 1024; i++) {
+                            standartArray5.value[i] = absvals[i];
+                        } break;
+                    }
+                default: {
+                        break;
+                    }
+            }
+
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="array">recorded audio</param>
+        /// <returns>-1: noise; 0: didn't corr; otherwise number array</returns>
+        public static int choiceOfAction(double[] array) {
+            double[] absvals = new double[array.Length];
+            FFT.fft(ref array, ref absvals);
+
+            if (noiseCancelling(absvals) != 0) {
+                resetPriority();
+                return -1;
+            }
+
+            int choice = 0;
+
+            switch (Arrays.getNumberOfArrays()) {
+                case 2: {
+                        choice = selectoinFromTwo(absvals);
+                        break;
+                    }
+                case 3: {
+                        choice = selectionFromThree(absvals);
+                        break;
+                    }
+                case 4: {
+                        choice = selectionFromFour(absvals);
+                        break;
+                    }
+                case 5: {
+                        choice = selectionFromFive(absvals);
+                        break;
+                    }
+                case 6: {
+                        choice = selectionFromSix(absvals);
+                        break;
+                    }
+                default: {
+                        break;
+                    }
+            }
+            if (choice != 0) {
+                switch (choice) {
+                    case 1: {
+                            if (standartArray0.priority < MAX_PRIORITY) {
+                                incPriority(ref standartArray0.priority);
+                            }
+                            break;
+                        }
+                    case 2: {
+                            if (standartArray1.priority < MAX_PRIORITY) {
+                                incPriority(ref standartArray1.priority);
+                            }
+                            break;
+                        }
+                    case 3: {
+                            if (standartArray2.priority < MAX_PRIORITY) {
+                                incPriority(ref standartArray2.priority);
+                            }
+                            break;
+                        }
+                    case 4: {
+                            if (standartArray3.priority < MAX_PRIORITY) {
+                                incPriority(ref standartArray3.priority);
+                            }
+                            break;
+                        }
+                    case 5: {
+                            if (standartArray4.priority < MAX_PRIORITY) {
+                                incPriority(ref standartArray4.priority);
+                            }
+                            break;
+                        }
+                    case 6: {
+                            if (standartArray5.priority < MAX_PRIORITY) {
+                                incPriority(ref standartArray5.priority);
+                            }
+                            break;
+                        }
+                    default: {
+                            break;
+                        }
+                }
+            }
+
+            return choice;
+        }
+
+        private static void incPriority(ref double priority) {
+            priority += INC_PRIORITY;
+        }
+
+/*        private static double[] complexToDouble(Complex[] complexArray) {
+            double[] doubleArray = new double[complexArray.Length];
+
+            for (int i = 0; i < doubleArray.Length; i++) {
+                doubleArray[i] = Math.Sqrt((complexArray[i].Real * complexArray[i].Real) + (complexArray[i].Imaginary * complexArray[i].Imaginary));
+            }
+            return doubleArray;
+        }
+        */
+        private static double valueOfNoise;
+
+        public static void setValueOfNoise(double[] array) {
+            
+            valueOfNoise = 0;
+
+            for (int i = 0; i < array.Length; i++) {
+                valueOfNoise += array[i] / array.Length;
+            }
+        }
+
+        
+        private static int noiseCancelling(double[] array) {
+            
+            double averageCount = 0;
+
+            for (int i = 0; i < 1024; i++) {
+                averageCount += array[i] / 1024;
+            }
+
+            if (averageCount < (valueOfNoise * factorOfNoise)) {
+                return 1;
+            }
+
+            return 0;
+        }
+
+        private static double factorOfNoise = 1.2;
+
+        public static int setFactorOfNoise(double count) {
+            if (count == 0) {
+                return 1;
+            }
+
+            factorOfNoise = count;
+            return 0;
+        }
+
+        private static void resetPriority() {
+            standartArray0.priority = 0;
+            standartArray1.priority = 0;
+            standartArray2.priority = 0;
+            standartArray3.priority = 0;
+            standartArray4.priority = 0;
+            standartArray5.priority = 0;
+        }
+
+        private static double correlation(double[] x, double[] y) {
+            double x_ = 0;
+            double y_ = 0;
+            for (int i = 0; i < x.Length; i++) {
+                x_ += x[i] / x.Length;
+                y_ += y[i] / y.Length;
+            }
+
+            double sumXY = 0;
+            double sumSqrX = 0;
+            double sumSqrY = 0;
+
+            for (int i = 0; i < x.Length; i++) {
+                sumXY += (x[i] - x_) * (y[i] - y_);
+                sumSqrX += (x[i] - x_) * (x[i] - x_);
+                sumSqrY += (y[i] - y_) * (y[i] - y_);
+            }
+
+            if ((sumSqrX * sumSqrY) == 0)
+                return 0;
+
+            return (sumXY / Math.Sqrt(sumSqrX * sumSqrY));
+
+        }
+
+        private static double minimumCorrelation = 0.2;
+
+        public static void setMinimumCorrelation(double n) {
+            minimumCorrelation = n;
+        }
+
+        private static int selectoinFromTwo(double[] array) {
+
+            standartArray0.correlation = correlation(array, standartArray0.value);
+            standartArray1.correlation = correlation(array, standartArray1.value);
+
+            standartArray0.calculationOfProbability();
+            standartArray1.calculationOfProbability();
+
+            if (standartArray0.correlation > minimumCorrelation &&
+                standartArray0.probability > standartArray1.probability) {
+                return 1;
+            }
+            if (standartArray1.correlation > minimumCorrelation &&
+                standartArray1.probability > standartArray0.probability) {
+                return 2;
+            }
+
+            return 0;
+        }
+
+        private static int selectionFromThree(double[] array) {
+
+            standartArray0.correlation = correlation(array, standartArray0.value);
+            standartArray1.correlation = correlation(array, standartArray1.value);
+            standartArray2.correlation = correlation(array, standartArray2.value);
+
+            standartArray0.calculationOfProbability();
+            standartArray1.calculationOfProbability();
+            standartArray2.calculationOfProbability();
+
+            if (standartArray0.correlation > minimumCorrelation &&
+                standartArray0.probability > standartArray1.probability &&
+                standartArray0.probability > standartArray2.probability) {
+                return 1;
+            }
+            if (standartArray1.correlation > minimumCorrelation &&
+                standartArray1.probability > standartArray0.probability &&
+                standartArray1.probability > standartArray2.probability) {
+                return 2;
+            }
+            if (standartArray2.correlation > minimumCorrelation &&
+                standartArray2.probability > standartArray0.probability &&
+                standartArray2.probability > standartArray1.probability) {
+                return 3;
+            }
+
+            return 0;
+        }
+
+        private static int selectionFromFour(double[] array) {
+
+            standartArray0.correlation = correlation(array, standartArray0.value);
+            standartArray1.correlation = correlation(array, standartArray1.value);
+            standartArray2.correlation = correlation(array, standartArray2.value);
+            standartArray3.correlation = correlation(array, standartArray3.value);
+
+            standartArray0.calculationOfProbability();
+            standartArray1.calculationOfProbability();
+            standartArray2.calculationOfProbability();
+            standartArray3.calculationOfProbability();
+
+
+            if (standartArray0.correlation > minimumCorrelation &&
+                standartArray0.probability > standartArray1.probability &&
+                standartArray0.probability > standartArray2.probability &&
+                standartArray0.probability > standartArray3.probability) {
+                return 1;
+            }
+            if (standartArray1.correlation > minimumCorrelation &&
+                standartArray1.probability > standartArray0.probability &&
+                standartArray1.probability > standartArray2.probability &&
+                standartArray1.probability > standartArray3.probability) {
+                return 2;
+            }
+            if (standartArray2.correlation > minimumCorrelation &&
+                standartArray2.probability > standartArray0.probability &&
+                standartArray2.probability > standartArray1.probability &&
+                standartArray2.probability > standartArray3.probability) {
+                return 3;
+            }
+            if (standartArray3.correlation > minimumCorrelation &&
+                standartArray3.probability > standartArray0.probability &&
+                standartArray3.probability > standartArray1.probability &&
+                standartArray3.probability > standartArray2.probability) {
+                return 4;
+            }
+
+            return 0;
+        }
+
+        private static int selectionFromFive(double[] array) {
+
+            standartArray0.correlation = correlation(array, standartArray0.value);
+            standartArray1.correlation = correlation(array, standartArray1.value);
+            standartArray2.correlation = correlation(array, standartArray2.value);
+            standartArray3.correlation = correlation(array, standartArray3.value);
+            standartArray4.correlation = correlation(array, standartArray4.value);
+
+            standartArray0.calculationOfProbability();
+            standartArray1.calculationOfProbability();
+            standartArray2.calculationOfProbability();
+            standartArray3.calculationOfProbability();
+            standartArray4.calculationOfProbability();
+
+            if (standartArray0.correlation > minimumCorrelation &&
+                standartArray0.probability > standartArray1.probability &&
+                standartArray0.probability > standartArray2.probability &&
+                standartArray0.probability > standartArray3.probability &&
+                standartArray0.probability > standartArray4.probability) {
+                return 1;
+            }
+            if (standartArray1.correlation > minimumCorrelation &&
+                standartArray1.probability > standartArray0.probability &&
+                standartArray1.probability > standartArray2.probability &&
+                standartArray1.probability > standartArray3.probability &&
+                standartArray1.probability > standartArray4.probability) {
+                return 2;
+            }
+            if (standartArray2.correlation > minimumCorrelation &&
+                standartArray2.probability > standartArray0.probability &&
+                standartArray2.probability > standartArray1.probability &&
+                standartArray2.probability > standartArray3.probability &&
+                standartArray2.probability > standartArray4.probability) {
+                return 3;
+            }
+            if (standartArray3.correlation > minimumCorrelation &&
+                standartArray3.probability > standartArray0.probability &&
+                standartArray3.probability > standartArray1.probability &&
+                standartArray3.probability > standartArray2.probability &&
+                standartArray3.probability > standartArray4.probability) {
+                return 4;
+            }
+            if (standartArray4.correlation > minimumCorrelation &&
+                standartArray4.probability > standartArray0.probability &&
+                standartArray4.probability > standartArray1.probability &&
+                standartArray4.probability > standartArray2.probability &&
+                standartArray4.probability > standartArray3.probability) {
+                return 5;
+            }
+
+
+            return 0;
+        }
+
+        private static int selectionFromSix(double[] array) {
+
+            standartArray0.correlation = correlation(array, standartArray0.value);
+            standartArray1.correlation = correlation(array, standartArray1.value);
+            standartArray2.correlation = correlation(array, standartArray2.value);
+            standartArray3.correlation = correlation(array, standartArray3.value);
+            standartArray4.correlation = correlation(array, standartArray4.value);
+            standartArray5.correlation = correlation(array, standartArray5.value);
+
+            standartArray0.calculationOfProbability();
+            standartArray1.calculationOfProbability();
+            standartArray2.calculationOfProbability();
+            standartArray3.calculationOfProbability();
+            standartArray4.calculationOfProbability();
+            standartArray5.calculationOfProbability();
+
+            if (standartArray0.correlation > minimumCorrelation &&
+                standartArray0.probability > standartArray1.probability &&
+                standartArray0.probability > standartArray2.probability &&
+                standartArray0.probability > standartArray3.probability &&
+                standartArray0.probability > standartArray4.probability &&
+                standartArray0.probability > standartArray5.probability) {
+                return 1;
+            }
+            if (standartArray1.correlation > minimumCorrelation &&
+                standartArray1.probability > standartArray0.probability &&
+                standartArray1.probability > standartArray2.probability &&
+                standartArray1.probability > standartArray3.probability &&
+                standartArray1.probability > standartArray4.probability &&
+                standartArray1.probability > standartArray5.probability) {
+                return 2;
+            }
+            if (standartArray2.correlation > minimumCorrelation &&
+                standartArray2.probability > standartArray0.probability &&
+                standartArray2.probability > standartArray1.probability &&
+                standartArray2.probability > standartArray3.probability &&
+                standartArray2.probability > standartArray4.probability &&
+                standartArray2.probability > standartArray5.probability) {
+                return 3;
+            }
+            if (standartArray3.correlation > minimumCorrelation &&
+                standartArray3.probability > standartArray0.probability &&
+                standartArray3.probability > standartArray1.probability &&
+                standartArray3.probability > standartArray2.probability &&
+                standartArray3.probability > standartArray4.probability &&
+                standartArray3.probability > standartArray5.probability) {
+                return 4;
+            }
+            if (standartArray4.correlation > minimumCorrelation &&
+                standartArray4.probability > standartArray0.probability &&
+                standartArray4.probability > standartArray1.probability &&
+                standartArray4.probability > standartArray2.probability &&
+                standartArray4.probability > standartArray3.probability &&
+                standartArray4.probability > standartArray5.probability) {
+                return 5;
+            }
+            if (standartArray5.correlation > minimumCorrelation &&
+                standartArray5.probability > standartArray0.probability &&
+                standartArray5.probability > standartArray1.probability &&
+                standartArray5.probability > standartArray2.probability &&
+                standartArray5.probability > standartArray3.probability &&
+                standartArray5.probability > standartArray4.probability) {
+                return 6;
+            }
+
+            return 0;
+        }
+
+
+    }
+
+
+
+    public class FFT {
+  
+       public static void fft(ref double[] inputArray, ref double[] outputArray) {
+            int i, j, n, m, max, Istp;
+            double Tmpr, Tmpi, Wtmp, Theta;
+            double Wpr, Wpi, Wr, Wi;
+
+            n = outputArray.Length * 2;
+
+            double[] Tmvl = new double[n]; ;
+
+            for (i = 0; i < outputArray.Length; i++) {
+                j = i * 2; Tmvl[j] = 0; Tmvl[j + 1] = inputArray[i];
+            }
+
+            i = 1; j = 1;
+            while (i < n) {
+                if (j > i) {
+                    Tmpr = Tmvl[i]; Tmvl[i] = Tmvl[j]; Tmvl[j] = Tmpr;
+                    Tmpr = Tmvl[i + 1]; Tmvl[i + 1] = Tmvl[j + 1]; Tmvl[j + 1] = Tmpr;
+                }
+                i = i + 2; m = outputArray.Length;
+                while ((m >= 2) && (j > m)) {
+                    j = j - m; m = m >> 1;
+                }
+                j = j + m;
+            }
+
+            max = 2;
+            while (n > max) {
+                Theta = -Math.PI*2 / max; 
+                Wpi = Math.Sin(Theta);
+                Wtmp = Math.Sin(Theta / 2); 
+                Wpr = Wtmp * Wtmp * 2;
+                Istp = max * 2; 
+                Wr = 1; 
+                Wi = 0; 
+                m = 1;
+
+                while (m < max) {
+                    i = m; m = m + 2; Tmpr = Wr; Tmpi = Wi;
+                    Wr = Wr - Tmpr * Wpr - Tmpi * Wpi;
+                    Wi = Wi + Tmpr * Wpi - Tmpi * Wpr;
+
+                    while (i < n) {
+                        j = i + max;
+                        Tmpr = Wr * Tmvl[j] - Wi * Tmvl[j - 1];
+                        Tmpi = Wi * Tmvl[j] + Wr * Tmvl[j - 1];
+
+                        Tmvl[j] = Tmvl[i] - Tmpr; Tmvl[j - 1] = Tmvl[i - 1] - Tmpi;
+                        Tmvl[i] = Tmvl[i] + Tmpr; Tmvl[i - 1] = Tmvl[i - 1] + Tmpi;
+                        i = i + Istp;
+                    }
+                }
+                max = Istp;
+            }
+            for (i = 0; i <outputArray.Length; i++) {
+                j = i * 2; outputArray[outputArray.Length - i - 1] = Math.Sqrt(Tmvl[j] * Tmvl[j] + Tmvl[j + 1] * Tmvl[j + 1]);
+            }
+        }
+    }\
+
+}
